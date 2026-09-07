@@ -34,6 +34,7 @@ type RSSItem struct {
 
 func scrapeFeeds(s *state) error {
 	ctx := context.Background()
+	// Get the next Feed based on when it was last updated
 	NextFeed, err := s.db.GetNextFeedToFetch(ctx)
 	if err != nil {
 		return err
@@ -46,19 +47,29 @@ func scrapeFeeds(s *state) error {
 			Valid: true,
 		},
 	}
+	// Mark the post as fetched
 	err = s.db.MarkFeedFetched(ctx, arg)
 	if err != nil {
 		return err
 	}
+	// Get the rssFeed list for the given feed url
 	rssFeed, err := fetchFeed(ctx, NextFeed.Url)
 	if err != nil {
 		return err
 	}
 	for _, item := range rssFeed.Channel.Item {
-		var publishTime time.time
-		publishTime, err := time.Parse(time.RFC1123)
+		var publishTime time.Time
+		var sqlPublishTime sql.NullTime
+		publishTime, err := time.Parse(time.RFC1123, item.PubDate)
 		if err != nil {
-
+			sqlPublishTime = sql.NullTime{
+				Valid: false,
+			}
+		} else {
+			sqlPublishTime = sql.NullTime{
+				Time: publishTime,
+				Valid: true,
+			}
 		}
 		newPostArg := database.CreatePostParams{
 			ID:        uuid.New(),
@@ -70,15 +81,19 @@ func scrapeFeeds(s *state) error {
 				String: item.Description,
 				Valid:  true,
 			},
-			PublishedAt: publishTime,
+			PublishedAt: sqlPublishTime,
 			FeedID:      NextFeed.ID,
 		}
 		_, err = s.db.CreatePost(ctx, newPostArg)
 		if err != nil {
 			if pqErr, ok := err.(*pq.Error); ok {
-				fmt.Println("Postgres error code:", pqErr.Code)
+				if pqErr.Code != "23505" {
+					return pqErr
+				}
+				return nil
+			} else {
+				return err
 			}
-			return err
 		}
 	}
 	return nil
