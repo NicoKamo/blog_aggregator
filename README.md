@@ -1,9 +1,65 @@
+# Gator
+
 This repository belongs to a guided project on bootdev.com regarding the blog aggregator.
+A multi-player command line tool for aggregating RSS feeds and viewing the posts.
 
-The user needs to install Go and Postgres to make use of this package.
+## Installation
 
-To install the package use go install gator.
+Make sure you have the latest [Go toolchain](https://golang.org/dl/) installed as well as a local Postgres database. You can then install `gator` with:
 
-We used a .gatorconfig.JSON file to define the database and the current logged in User.
+```sh
+go install ...
+```
 
-We added multiple functions of registering users, login in, following and unfollowing of feeds, browsing of the feeds and aggregation of the posts.
+Install the `gator` binary using `go install`:
+
+```bash
+go install github.com/<your-username>/gator@latest
+
+## Config
+
+Create a `.gatorconfig.json` file in your home directory with the following structure:
+
+```json
+{
+  "db_url": "postgres://username:@localhost:5432/database?sslmode=disable"
+}
+```
+
+Replace the values with your database connection string.
+
+
+## Usage 
+
+
+Create a new user:
+
+```sh
+gator register <name>
+```
+
+Add a feed:
+
+```sh
+gator addfeed <url>
+```
+
+Start the aggregator:
+
+```sh
+gator agg 30s
+```
+
+View the posts:
+
+```sh
+gator browse [limit]
+```
+
+There are a few other commands you'll need as well:
+
+- `gator login <name>` - Log in as a user that already exists
+- `gator users` - List all users
+- `gator feeds` - List all feeds
+- `gator follow <url>` - Follow a feed that already exists in the database
+- `gator unfollow <url>` - Unfollow a feed that already exists in the database
